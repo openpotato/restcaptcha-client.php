@@ -1,0 +1,69 @@
+pool:
+  vmImage: 'ubuntu-24.04'
+
+variables:
+- group: 'github-config'
+
+stages:
+
+- stage: Test  
+  jobs:
+  - job: 
+    steps:
+    - checkout: self
+    - script: |
+
+        # Fail fast
+        set -euo pipefail
+
+        # Echo PHP and Composer versions
+        php -v
+        composer --version
+
+        # Install dependencies 
+        composer validate --no-interaction --no-ansi
+        composer install --no-interaction --prefer-dist --no-progress --no-ansi
+        
+      displayName: 'Install dependencies'
+    - script: './vendor/bin/phpunit tests'
+      displayName: 'Run Tests with PHPUnit'
+
+- stage: GitHub
+  jobs:
+  - job: 
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    steps:
+    - checkout: self
+      fetchDepth: 0
+    - script: |
+
+        # Fail fast
+        set -euo pipefail
+
+        # Configure Git identity
+        git config user.name  "azure-devops-bot"
+        git config user.email "azuredevops@stueber.nomail"
+
+        # Add 'github' remote
+        git remote add github "https://${PAT}@github.com/openpotato/restcaptcha-client.php.git"
+
+        # Fetch remote main if it exists
+        git fetch --prune github main || true
+
+        # If remote branch exists, only push when remote is an ancestor of HEAD (fast-forward safe)
+        if git show-ref --verify --quiet refs/remotes/github/main; then
+          if ! git merge-base --is-ancestor github/main HEAD; then
+            echo "Remote has commits not in local (or histories diverged). Aborting push." >&2
+            exit 1
+          fi
+        fi
+
+        # Push only the main branch (fast-forward or create remote if missing)
+        git push --tags github HEAD:refs/heads/main
+                        
+        # Remove the remote so the PAT isn't left in .git/config
+        git remote remove github || true
+        
+      displayName: 'Push to GitHub'
+      env:
+        PAT: $(PAT)
