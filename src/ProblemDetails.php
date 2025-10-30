@@ -75,9 +75,9 @@ class ProblemDetailsException extends \Exception
         string $type, 
         string $title, 
         int $status, 
-        string $detail = null,
-        string $instance = null,
-        string $traceId = null,
+        ?string $detail = null,
+        ?string $instance = null,
+        ?string $traceId = null,
         array $errors = [])
     {
         $this->type = $type;
