@@ -1,7 +1,7 @@
 {
   "name": "openpotato/restcaptcha-client",
   "description": "A client library for the RESTCaptcha project",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "library",
   "keywords": [
     "captcha",
