@@ -1,25 +1,8 @@
 {
   "name": "openpotato/restcaptcha-client",
   "description": "A client library for the RESTCaptcha project",
-  "version": "0.2.1",
   "type": "library",
-  "keywords": [
-    "captcha",
-    "restcaptcha",
-    "http"
-  ],
-  "require": {
-    "php": ">=8.3",
-    "guzzlehttp/guzzle": "^7.9"
-  },
-  "require-dev": {
-    "phpunit/phpunit": "^12.0"
-  },
-  "autoload": {
-    "classmap": [
-      "src/"
-    ]
-  },
+  "homepage": "https://github.com/openpotato/restcaptcha-client.php",
   "license": "MIT",
   "authors": [
     {
@@ -27,5 +10,23 @@
       "email": "opensource@stueber.de",
       "homepage": "https://github.com/openpotato"
     }
+  ],
+  "require": {
+    "php": ">=8.3",
+    "guzzlehttp/guzzle": "^7.10"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^12.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "RestCaptcha\\": "src/"
+    }
+  },
+  "keywords": [
+    "api-client",
+    "captcha",
+    "restcaptcha",
+    "http"
   ]
 }
