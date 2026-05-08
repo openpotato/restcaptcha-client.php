@@ -8,7 +8,6 @@ namespace RestCaptcha;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Middleware;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\Request;
@@ -20,6 +19,16 @@ use RestCaptcha\VerifyStatus;
 
 class ApiClientTest extends TestCase
 {
+    public function testVerifyResponseToString(): void
+    {
+        $response = new VerifyResponse(VerifyStatus::SUCCESS, 'www.mydomain.eu');
+
+        $this->assertSame(
+            "Status: success" . PHP_EOL . "HostName: www.mydomain.eu",
+            (string)$response
+        );
+    }
+
     public function testSuccess(): void
     {
         $success = [
@@ -90,6 +99,32 @@ class ApiClientTest extends TestCase
 
         $this->expectException(RequestException::class);
         $apiClient->verifySolution('token', 'solution', '127.0.0.1');     
+    }
+
+    public function testMalformedProblemDetailsFallsBackToRequestException(): void
+    {
+        $mock = new MockHandler([
+            new Response(400, ['Content-Type' => 'application/problem+json'], '{invalid-json')
+        ]);
+
+        $httpClient = new Client(['handler' => HandlerStack::create($mock), 'base_uri' => 'https://localhost:44303/v1/']);
+        $apiClient = new ApiClient('test-key', 'test-secret', 'en', ['client' => $httpClient]);
+
+        $this->expectException(RequestException::class);
+        $apiClient->verifySolution('token', 'solution', '127.0.0.1');
+    }
+
+    public function testIncompleteProblemDetailsFallsBackToRequestException(): void
+    {
+        $mock = new MockHandler([
+            new Response(400, ['Content-Type' => 'application/problem+json'], '{}')
+        ]);
+
+        $httpClient = new Client(['handler' => HandlerStack::create($mock), 'base_uri' => 'https://localhost:44303/v1/']);
+        $apiClient = new ApiClient('test-key', 'test-secret', 'en', ['client' => $httpClient]);
+
+        $this->expectException(RequestException::class);
+        $apiClient->verifySolution('token', 'solution', '127.0.0.1');
     }
 }
 ?>

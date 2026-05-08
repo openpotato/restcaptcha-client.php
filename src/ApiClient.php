@@ -48,7 +48,7 @@ class ApiClient
      *
      * @param string $siteKey       The public site key.
      * @param string $siteSecret    The private site secret.
-     * @param string $language      The language code for message translation.
+     * @param ?string $language     The language code for message translation.
      * @param array  $clientConfig  Optional configuration array:
      *                              - 'client'         => (Client) Custom Guzzle client instance.
      *                              - 'client_options' => (array) Guzzle client options if a client is not provided.
@@ -56,7 +56,7 @@ class ApiClient
     public function __construct(
         string $siteKey, 
         string $siteSecret, 
-        string $language, 
+        ?string $language, 
         array $clientConfig = []
     ) {
         $this->siteKey = $siteKey;
@@ -88,7 +88,7 @@ class ApiClient
      * @param string  $solution  The user-submitted solution to the challenge.
      * @param ?string $callerIp  The IP address of the backend submitting the solution.
      * 
-     * @return VerifyResponse    The response of the verification request
+     * @return VerifyResponse    The verification response.
      * 
      * @throws ProblemDetailsException|RequestException|RuntimeException
      */
@@ -146,16 +146,32 @@ class ApiClient
             // Try to decode structured RFC 9457 response
             if (strpos($contentType, 'application/problem+json') !== false) {
                 
-                $problemDetails = json_decode($response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+                // Attempt to decode the response body as JSON
+                try {
+                    $problemDetails = json_decode((string)$response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+                } catch (\JsonException) {
+                    return;
+                }
 
+                // Validate required properties and types according to RFC 9457
+                if (!is_array($problemDetails)
+                    || !isset($problemDetails['type'], $problemDetails['title'], $problemDetails['status'])
+                    || !is_string($problemDetails['type'])
+                    || !is_string($problemDetails['title'])
+                    || !is_int($problemDetails['status'])
+                ) {
+                    return;
+                }
+
+                // Throw a ProblemDetailsException with the decoded details
                 throw new ProblemDetailsException(
                     $problemDetails['type'],
                     $problemDetails['title'],
-                    (int)$problemDetails['status'],
+                    $problemDetails['status'],
                     $problemDetails['detail'] ?? null,
                     $problemDetails['instance'] ?? null,
                     $problemDetails['traceId'] ?? null,
-                    array_diff_key($problemDetails['errors'] ?? [])
+                    is_array($problemDetails['errors'] ?? null) ? $problemDetails['errors'] : []
                 );
             }
         }
